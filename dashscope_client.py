@@ -1,111 +1,136 @@
 import os
 import json
 from typing import List, Dict, Any
-import base64
 from http import HTTPStatus
-from dashscope import Application
-
-
-def encode_image_to_base64(image_path: str) -> str:
-    """
-    将图片文件编码为base64字符串
-    
-    Args:
-        image_path: 图片文件路径
-        
-    Returns:
-        base64编码的字符串
-    """
-    with open(image_path, "rb") as image_file:
-        return base64.b64encode(image_file.read()).decode('utf-8')
+import dashscope
 
 
 def analyze_files_with_dashscope(file_paths: List[str]) -> List[Dict[str, Any]]:
     """
-    使用阿里百炼大模型API分析文件并获取结构化内容
+    使用阿里云百炼大模型API分析文件中的内容，提取单词信息
     
     Args:
         file_paths: 文件路径列表
         
     Returns:
-        结构化的单词数据列表
+        解析后的单词数据列表
     """
-    # 获取API密钥和应用ID
-    api_key = get_api_key()
-    app_id = os.environ.get("DASHSCOPE_APP_ID")
-    
+    # 从环境变量获取API Key
+    api_key = os.getenv('DASHSCOPE_API_KEY')
     if not api_key:
-        print("错误: 未设置DASHSCOPE_API_KEY环境变量")
-        return []
+        raise ValueError("请设置环境变量 DASHSCOPE_API_KEY")
     
-    if not app_id:
-        print("错误: 未设置DASHSCOPE_APP_ID环境变量")
-        return []
+    dashscope.api_key = api_key
     
-    # 构造提示词
-    prompt = "请分析这些文件中的内容，提取其中的英文单词、中文释义、词性和例句，以JSON格式返回。"
-    prompt += "格式示例: [{\"english\": \"word\", \"chinese\": \"中文释义\", \"part_of_speech\": \"词性\", \"example_sentence\": \"例句\"}]"
+    # 构造提示词，要求模型以特定格式返回单词数据
+    prompt = '''请分析图片中的内容，提取出英文单词及其相关信息。
+    对于每个识别出的单词，请按照以下JSON格式返回：
+    {
+        "word": "单词",
+        "phonetic": "音标",
+        "meaning": "中文含义"
+    }
     
-    # 调用阿里百炼大模型API
-    print("调用阿里百炼大模型API分析文件:")
+    请将所有单词以数组形式返回，格式如下：
+    [
+        {
+            "word": "example",
+            "phonetic": "/ɪɡˈzæmpəl/",
+            "meaning": "例子"
+        }
+    ]
+    
+    只返回JSON格式数据，不要包含其他文字。'''
+
+    # 调用多模态模型处理文件
+    messages = [
+        {
+            'role': 'system',
+            'content': [{
+                'text': '你是一个专业的英语老师，擅长识别图片中的英文单词并提供详细解释。'
+            }]
+        },
+        {
+            'role': 'user',
+            'content': []
+        }
+    ]
+    
+    # 添加文件内容到消息中
     for file_path in file_paths:
-        print(f"  - {file_path}")
+        file_ext = os.path.splitext(file_path)[1].lower()
+        if file_ext in ['.jpeg', '.jpg']:
+            messages[1]['content'].append({
+                'image': f'file://{os.path.abspath(file_path)}'
+            })
+        elif file_ext == '.pdf':
+            # 对于PDF文件，需要先处理或提示用户不支持
+            print(f"警告: 当前版本可能不完全支持PDF文件: {file_path}")
+            # 这里可以添加PDF处理逻辑，暂时跳过
+            continue
     
-    print("正在分析文件内容...")
+    messages[1]['content'].append({
+        'text': prompt
+    })
     
-    try:
-        response = Application.call(
-            api_key=api_key,
-            app_id=app_id,
-            prompt=prompt
-        )
-        
-        if response.status_code != HTTPStatus.OK:
-            print(f'request_id={response.request_id}')
-            print(f'code={response.status_code}')
-            print(f'message={response.message}')
-            print('请参考文档：https://help.aliyun.com/zh/model-studio/developer-reference/error-code')
+    # 调用DashScope API
+    response = dashscope.MultiModalConversation.call(
+        model='qwen-vl-max',
+        messages=messages
+    )
+    
+    # 处理响应
+    if response.status_code == HTTPStatus.OK:
+        try:
+            # 从响应中提取文本内容
+            text_content = response.output.choices[0].message.content
+            # 如果返回的是列表格式，直接使用
+            if isinstance(text_content, list):
+                # 提取文本部分
+                for item in text_content:
+                    if item.get('text'):
+                        # 尝试解析JSON
+                        data = json.loads(item['text'])
+                        if isinstance(data, list):
+                            return data
+            else:
+                # 如果是字符串，尝试解析JSON
+                # 需要从文本中提取JSON部分
+                json_str = extract_json_from_text(text_content)
+                if json_str:
+                    return json.loads(json_str)
+                
+            # 如果以上都不成功，返回空列表
             return []
-        else:
-            # 解析响应内容
-            result_text = response.output.text
-            print("分析完成，获取到结构化数据")
-            
-            # 这里应该解析返回的JSON数据
-            # 暂时返回示例数据
-            sample_data = [
-                {
-                    "english": "Hello",
-                    "chinese": "你好",
-                    "part_of_speech": "interjection",
-                    "example_sentence": "Hello! How are you today?"
-                },
-                {
-                    "english": "World",
-                    "chinese": "世界",
-                    "part_of_speech": "noun",
-                    "example_sentence": "The whole world was watching."
-                }
-            ]
-            
-            return sample_data
-    except Exception as e:
-        print(f"调用阿里百炼大模型API时发生错误: {e}")
+        except Exception as e:
+            print(f"解析API响应时出错: {e}")
+            return []
+    else:
+        print(f"API调用失败: {response.code} - {response.message}")
         return []
 
 
-def get_api_key() -> str:
+def extract_json_from_text(text):
     """
-    获取DashScope API密钥
+    从文本中提取JSON字符串
     
+    Args:
+        text: 包含JSON的文本
+        
     Returns:
-        API密钥字符串
+        提取出的JSON字符串，如果未找到则返回None
     """
-    # 从环境变量获取API密钥
-    api_key = os.environ.get("DASHSCOPE_API_KEY")
+    # 查找第一个[和最后一个]之间的内容
+    start = text.find('[')
+    end = text.rfind(']')
     
-    if not api_key:
-        print("警告: 未设置DASHSCOPE_API_KEY环境变量")
-        print("请设置环境变量，例如: export DASHSCOPE_API_KEY=your_api_key_here")
+    if start != -1 and end != -1 and start < end:
+        json_str = text[start:end+1]
+        try:
+            # 验证是否为有效的JSON
+            json.loads(json_str)
+            return json_str
+        except json.JSONDecodeError:
+            pass
     
-    return api_key
+    return None
