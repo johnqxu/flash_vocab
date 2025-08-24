@@ -1,0 +1,14 @@
+[
+    {
+        "english": "Hello",
+        "chinese": "你好",
+        "part_of_speech": "interjection",
+        "example_sentence": "Hello! How are you?"
+    },
+    {
+        "english": "Apple",
+        "chinese": "苹果",
+        "part_of_speech": "noun",
+        "example_sentence": "An apple a day keeps the doctor away."
+    }
+]
