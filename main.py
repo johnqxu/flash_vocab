@@ -5,6 +5,14 @@ import glob
 from pdf_generator import create_flashcards_pdf
 from dashscope_client import analyze_files_with_dashscope
 
+# 加载 .env 文件中的环境变量
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    print("警告: 未安装 python-dotenv，无法自动加载 .env 文件")
+    print("请手动设置环境变量，或运行: pip install python-dotenv")
+
 
 def main():
     """
@@ -14,13 +22,13 @@ def main():
     workspace_files = []
     for ext in ["*.jpeg", "*.jpg", "*.pdf"]:
         workspace_files.extend(glob.glob(os.path.join("workspace", ext)))
-
+    
     if workspace_files:
         # 如果找到文件，则将这些文件作为参数上传到阿里百炼大模型API进行分析
         print("找到以下文件:")
         for file in workspace_files:
             print(f"  {file}")
-
+        
         # 调用阿里百炼大模型API进行分析
         data = analyze_files_with_dashscope(workspace_files)
     elif len(sys.argv) > 1:
