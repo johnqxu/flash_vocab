@@ -5,12 +5,12 @@ from http import HTTPStatus
 import dashscope
 
 
-def analyze_files_with_dashscope(file_paths: List[str]) -> List[Dict[str, Any]]:
+def analyze_file_with_dashscope(file_path: str) -> List[Dict[str, Any]]:
     """
     使用阿里云百炼大模型API分析文件中的内容，提取单词信息
 
     Args:
-        file_paths: 文件路径列表
+        file_path: 文件路径
 
     Returns:
         解析后的单词数据列表
@@ -56,17 +56,16 @@ def analyze_files_with_dashscope(file_paths: List[str]) -> List[Dict[str, Any]]:
     ]
 
     # 添加文件内容到消息中
-    for file_path in file_paths:
-        file_ext = os.path.splitext(file_path)[1].lower()
-        if file_ext in [".jpeg", ".jpg"]:
-            messages[1]["content"].append(
-                {"image": f"file://{os.path.abspath(file_path)}"}
-            )
-        elif file_ext == ".pdf":
-            # 对于PDF文件，需要先处理或提示用户不支持
-            print(f"警告: 当前版本可能不完全支持PDF文件: {file_path}")
-            # 这里可以添加PDF处理逻辑，暂时跳过
-            continue
+    file_ext = os.path.splitext(file_path)[1].lower()
+    if file_ext in [".jpeg", ".jpg"]:
+        messages[1]["content"].append(
+            {"image": f"file://{os.path.abspath(file_path)}"}
+        )
+    elif file_ext == ".pdf":
+        # 对于PDF文件，需要先处理或提示用户不支持
+        print(f"警告: 当前版本可能不完全支持PDF文件: {file_path}")
+        # 这里可以添加PDF处理逻辑，暂时跳过
+        return []
 
     messages[1]["content"].append({"text": prompt})
 
