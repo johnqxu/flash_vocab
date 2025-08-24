@@ -1,18 +1,22 @@
 import hashlib
 import os
-import json
+from time import sleep
 from typing import List, Dict, Any
-from http import HTTPStatus
 import dashscope
 from alibabacloud_bailian20231229.client import Client as bailian20231229Client
-from alibabacloud_credentials.client import Client as CredentialClient
 from alibabacloud_tea_openapi import models as open_api_models
 from alibabacloud_bailian20231229 import models as bailian_20231229_models
 from alibabacloud_tea_util import models as util_models
 from alibabacloud_tea_util.client import Client as UtilClient
-from alibabacloud_bailian20231229.models import ApplyFileUploadLeaseResponse
+from alibabacloud_bailian20231229.models import (
+    ApplyFileUploadLeaseResponse,
+    AddFileResponse,
+)
 import requests
 from urllib.parse import urlparse
+import os
+from http import HTTPStatus
+from dashscope import Application
 
 
 def analyze_file_with_dashscope(file_path: str) -> List[Dict[str, Any]]:
@@ -20,17 +24,38 @@ def analyze_file_with_dashscope(file_path: str) -> List[Dict[str, Any]]:
     if not api_key:
         raise ValueError("请设置环境变量 DASHSCOPE_API_KEY")
     dashscope.api_key = api_key
-    lease: ApplyFileUploadLeaseResponse = create_upload_lease(file_path)
+    client = create_client()
+    lease: ApplyFileUploadLeaseResponse = create_upload_lease(client, file_path)
     upload_file(
         lease.body.data.param.url,
         lease.body.data.param.headers["X-bailian-extra"],
         lease.body.data.param.headers["Content-Type"],
         file_path,
     )
+    file_resp: AddFileResponse = add_files_to_dashscope(
+        client, lease.body.data.file_upload_lease_id
+    )
+    call_dashscope_api(file_resp.body.data.file_id)
+
+
+def call_dashscope_api(file_id):
+    response = Application.call(
+        api_key=os.getenv("DASHSCOPE_API_KEY"),
+        app_id=os.getenv("DASHSCOPE_APP_ID"),
+        prompt="请按照指令分析文件并输出数据",
+        rag_options={
+            "session_file_ids": [file_id],
+        },
+    )
+    if response.status_code != HTTPStatus.OK:
+        print(f"request_id={response.request_id}")
+        print(f"code={response.status_code}")
+        print(f"message={response.message}")
+    else:
+        print("%s\n" % (response.output.text))
 
 
 def create_client() -> bailian20231229Client:
-    credential = CredentialClient()
     config = open_api_models.Config(
         type="access_key",
         access_key_id=os.environ.get("ALIBABA_CLOUD_ACCESS_KEY_ID"),
@@ -58,10 +83,8 @@ def calculate_md5(file_path):
     return md5_hash.hexdigest()
 
 
-def create_upload_lease(file_path: str) -> Dict[str, Any]:
+def create_upload_lease(client, file_path: str) -> Dict[str, Any]:
     file_name = os.path.basename(file_path)
-
-    client = create_client()
     apply_file_upload_lease_request = (
         bailian_20231229_models.ApplyFileUploadLeaseRequest(
             md_5=calculate_md5(file_path),
@@ -107,3 +130,24 @@ def upload_file(pre_signed_url, x_bailian_extra, content_type, file_path):
 
     except Exception as e:
         print(f"An error occurred: {str(e)}")
+
+
+def add_files_to_dashscope(client, lease_id):
+    add_file_request = bailian_20231229_models.AddFileRequest(
+        lease_id=lease_id, parser="DASHSCOPE_DOCMIND", category_id="default"
+    )
+    runtime = util_models.RuntimeOptions()
+    headers = {}
+    try:
+        # 复制代码运行请自行打印 API 的返回值
+        resp = client.add_file_with_options(
+            "llm-ks2o91he406b87js", add_file_request, headers, runtime
+        )
+        return resp
+    except Exception as error:
+        # 此处仅做打印展示，请谨慎对待异常处理，在工程项目中切勿直接忽略异常。
+        # 错误 message
+        print(error.message)
+        # 诊断地址
+        print(error.data.get("Recommend"))
+        UtilClient.assert_as_string(error.message)
