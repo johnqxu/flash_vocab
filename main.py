@@ -57,47 +57,42 @@ def create_flashcards_pdf(data, output_filename):
     card_width = usable_width / cards_per_row
     card_height = usable_height / cards_per_column
 
-    # 创建样式
+    # 创建样式并设置中文字体
     styles = getSampleStyleSheet()
-
-    # 基础样式字体设置
     styles["Normal"].fontName = chinese_font
 
-    # 定义标题样式
+    # 定义所有样式
     title_style = ParagraphStyle(
         "Title",
         parent=styles["Normal"],
-        fontName=chinese_font,  # 确保使用中文字体
+        fontName=chinese_font,
         fontSize=14,
         alignment=TA_CENTER,
         spaceAfter=6,
     )
 
-    # 定义中文释义样式
     chinese_style = ParagraphStyle(
         "Chinese",
         parent=styles["Normal"],
-        fontName=chinese_font,  # 确保使用中文字体
+        fontName=chinese_font,
         fontSize=12,
         alignment=TA_CENTER,
         spaceAfter=6,
     )
 
-    # 定义词性样式
     pos_style = ParagraphStyle(
         "PartOfSpeech",
         parent=styles["Normal"],
-        fontName=chinese_font,  # 确保使用中文字体
+        fontName=chinese_font,
         fontSize=10,
         alignment=TA_CENTER,
         spaceAfter=4,
     )
 
-    # 定义例句样式
     example_style = ParagraphStyle(
         "Example",
         parent=styles["Normal"],
-        fontName=chinese_font,  # 确保使用中文字体
+        fontName=chinese_font,
         fontSize=9,
         alignment=TA_CENTER,
         leading=10,
@@ -115,22 +110,17 @@ def create_flashcards_pdf(data, output_filename):
         # 创建卡片内容
         card_content = []
 
-        # 英文单词
+        # 构建卡片内容
         if english:
             card_content.append(Paragraph(english, title_style))
-
-        # 词性
-        if part_of_speech:
-            card_content.append(Paragraph(f"({part_of_speech})", pos_style))
-        elif not part_of_speech and english:
-            # 如果有英文但没有词性，则添加空行保持格式一致
-            card_content.append(Paragraph("&nbsp;", pos_style))
-
-        # 中文释义
+            if part_of_speech:
+                card_content.append(Paragraph(f"({part_of_speech})", pos_style))
+            else:
+                card_content.append(Paragraph("&nbsp;", pos_style))
+        
         if chinese:
             card_content.append(Paragraph(chinese, chinese_style))
-
-        # 例句
+            
         if example_sentence:
             card_content.append(Paragraph(example_sentence, example_style))
 
@@ -154,10 +144,11 @@ def create_flashcards_pdf(data, output_filename):
             for col in range(cards_per_row):
                 card_index = row * cards_per_row + col
                 if card_index < len(page_cards):
-                    # 使用KeepInFrame确保内容适应卡片大小
                     content = page_cards[card_index]
                     frame = KeepInFrame(
-                        int(card_width - 0.5 * cm), int(card_height - 0.5 * cm), content
+                        int(card_width - 0.5 * cm), 
+                        int(card_height - 0.5 * cm), 
+                        content
                     )
                     table_row.append(frame)
                 else:
