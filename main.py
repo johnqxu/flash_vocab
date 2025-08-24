@@ -40,8 +40,8 @@ def main():
             # 生成PDF文件
             base_name = os.path.splitext(os.path.basename(file_path))[0]
             output_filename = f"flashcards_{base_name}.pdf"
-            create_flashcards_pdf(data, output_filename)
-            print(f"已生成PDF文件: {output_filename}")
+            # create_flashcards_pdf(data, output_filename)
+            # print(f"已生成PDF文件: {output_filename}")
 
 
 if __name__ == "__main__":

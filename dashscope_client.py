@@ -1,131 +1,109 @@
+import hashlib
 import os
 import json
 from typing import List, Dict, Any
 from http import HTTPStatus
 import dashscope
+from alibabacloud_bailian20231229.client import Client as bailian20231229Client
+from alibabacloud_credentials.client import Client as CredentialClient
+from alibabacloud_tea_openapi import models as open_api_models
+from alibabacloud_bailian20231229 import models as bailian_20231229_models
+from alibabacloud_tea_util import models as util_models
+from alibabacloud_tea_util.client import Client as UtilClient
+from alibabacloud_bailian20231229.models import ApplyFileUploadLeaseResponse
+import requests
+from urllib.parse import urlparse
 
 
 def analyze_file_with_dashscope(file_path: str) -> List[Dict[str, Any]]:
-    """
-    使用阿里云百炼大模型API分析文件中的内容，提取单词信息
-
-    Args:
-        file_path: 文件路径
-
-    Returns:
-        解析后的单词数据列表
-    """
-    # 从环境变量获取API Key
     api_key = os.getenv("DASHSCOPE_API_KEY")
     if not api_key:
         raise ValueError("请设置环境变量 DASHSCOPE_API_KEY")
-
     dashscope.api_key = api_key
-
-    # 构造提示词，要求模型以特定格式返回单词数据
-    prompt = """请分析图片中的内容，提取出英文单词及其相关信息。
-    对于每个识别出的单词，请按照以下JSON格式返回：
-    {
-        "word": "单词",
-        "phonetic": "音标",
-        "meaning": "中文含义"
-    }
-    
-    请将所有单词以数组形式返回，格式如下：
-    [
-        {
-            "word": "example",
-            "phonetic": "/ɪɡˈzæmpəl/",
-            "meaning": "例子"
-        }
-    ]
-    
-    只返回JSON格式数据，不要包含其他文字。"""
-
-    # 调用多模态模型处理文件
-    messages = [
-        {
-            "role": "system",
-            "content": [
-                {
-                    "text": "你是一个专业的英语老师，擅长识别图片中的英文单词并提供详细解释。"
-                }
-            ],
-        },
-        {"role": "user", "content": []},
-    ]
-
-    # 添加文件内容到消息中
-    file_ext = os.path.splitext(file_path)[1].lower()
-    if file_ext in [".jpeg", ".jpg"]:
-        messages[1]["content"].append(
-            {"image": f"file://{os.path.abspath(file_path)}"}
-        )
-    elif file_ext == ".pdf":
-        # 对于PDF文件，需要先处理或提示用户不支持
-        print(f"警告: 当前版本可能不完全支持PDF文件: {file_path}")
-        # 这里可以添加PDF处理逻辑，暂时跳过
-        return []
-
-    messages[1]["content"].append({"text": prompt})
-
-    # 调用DashScope API
-    response = dashscope.MultiModalConversation.call(
-        model="qwen-vl-max", messages=messages
+    lease: ApplyFileUploadLeaseResponse = create_upload_lease(file_path)
+    upload_file(
+        lease.body.data.param.url,
+        lease.body.data.param.headers["X-bailian-extra"],
+        lease.body.data.param.headers["Content-Type"],
+        file_path,
     )
 
-    # 处理响应
-    if response.status_code == HTTPStatus.OK:
-        try:
-            # 从响应中提取文本内容
-            text_content = response.output.choices[0].message.content
-            # 如果返回的是列表格式，直接使用
-            if isinstance(text_content, list):
-                # 提取文本部分
-                for item in text_content:
-                    if item.get("text"):
-                        # 尝试解析JSON
-                        data = json.loads(item["text"])
-                        if isinstance(data, list):
-                            return data
-            else:
-                # 如果是字符串，尝试解析JSON
-                # 需要从文本中提取JSON部分
-                json_str = extract_json_from_text(text_content)
-                if json_str:
-                    return json.loads(json_str)
 
-            # 如果以上都不成功，返回空列表
-            return []
-        except Exception as e:
-            print(f"解析API响应时出错: {e}")
-            return []
-    else:
-        print(f"API调用失败: {response.code} - {response.message}")
-        return []
+def create_client() -> bailian20231229Client:
+    credential = CredentialClient()
+    config = open_api_models.Config(
+        type="access_key",
+        access_key_id=os.environ.get("ALIBABA_CLOUD_ACCESS_KEY_ID"),
+        access_key_secret=os.environ.get("ALIBABA_CLOUD_ACCESS_KEY_SECRET"),
+    )
+    config.endpoint = f"bailian.cn-beijing.aliyuncs.com"
+    return bailian20231229Client(config)
 
 
-def extract_json_from_text(text):
-    """
-    从文本中提取JSON字符串
+def calculate_md5(file_path):
+    """计算文档的 MD5 值。
 
     Args:
-        text: 包含JSON的文本
+        file_path (str): 文档的路径。
 
     Returns:
-        提取出的JSON字符串，如果未找到则返回None
+        str: 文档的 MD5 值。
     """
-    # 查找第一个[和最后一个]之间的内容
-    start = text.find("[")
-    end = text.rfind("]")
+    md5_hash = hashlib.md5()
+    # 以二进制形式读取文件
+    with open(file_path, "rb") as f:
+        # 按块读取文件，避免大文件占用过多内存
+        for chunk in iter(lambda: f.read(4096), b""):
+            md5_hash.update(chunk)
+    return md5_hash.hexdigest()
 
-    if start != -1 and end != -1 and start < end:
-        json_str = text[start : end + 1]
-        try:
-            # 验证是否为有效的JSON
-            json.loads(json_str)
-            return json_str
-        except json.JSONDecodeError:
-            pass
 
-    return None
+def create_upload_lease(file_path: str) -> Dict[str, Any]:
+    file_name = os.path.basename(file_path)
+
+    client = create_client()
+    apply_file_upload_lease_request = (
+        bailian_20231229_models.ApplyFileUploadLeaseRequest(
+            md_5=calculate_md5(file_path),
+            file_name=file_name,
+            size_in_bytes=os.path.getsize(file_path),
+        )
+    )
+    runtime = util_models.RuntimeOptions(read_timeout=6000, connect_timeout=6000)
+    headers = {}
+    try:
+        resp = client.apply_file_upload_lease_with_options(
+            "default",
+            "llm-ks2o91he406b87js",
+            apply_file_upload_lease_request,
+            headers,
+            runtime,
+        )
+        return resp
+    except Exception as error:
+        print(error.message)
+        print(error.data.get("Recommend"))
+        UtilClient.assert_as_string(error.message)
+
+
+def upload_file(pre_signed_url, x_bailian_extra, content_type, file_path):
+    try:
+        # 设置请求头
+        headers = {
+            "X-bailian-extra": x_bailian_extra,
+            "Content-Type": content_type,
+        }
+
+        # 读取文档并上传
+        with open(file_path, "rb") as file:
+            # 下方设置请求方法用于文档上传，需与您在上一步中调用ApplyFileUploadLease接口实际返回的Data.Param中Method字段的值一致
+            response = requests.put(pre_signed_url, data=file, headers=headers)
+
+        # 检查响应状态码
+        if response.status_code == 200:
+            print("File uploaded successfully.")
+        else:
+            print(f"Failed to upload the file. ResponseCode: {response.status_code}")
+
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")
