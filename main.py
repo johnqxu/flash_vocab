@@ -12,6 +12,11 @@ from reportlab.platypus import (
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.units import cm
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+
+# 注册中文字体
+pdfmetrics.registerFont(TTFont('STHeitiLight', 'STHeiti Light.ttc'))
 
 
 def create_flashcards_pdf(data, output_filename):
@@ -22,12 +27,6 @@ def create_flashcards_pdf(data, output_filename):
         data: 包含单词信息的列表
         output_filename: 输出PDF文件名
     """
-    # 使用ReportLab内置的字体，支持中文
-    # 这些字体在所有PDF阅读器中都可用
-
-    # 注意：系统中文字体支持需要特殊配置
-    print("警告：当前使用基础字体显示中文，建议安装中文字体获得更好显示效果")
-
     # 创建PDF文档
     doc = SimpleDocTemplate(output_filename, pagesize=A4)
     doc.title = "单词卡片"
@@ -41,10 +40,8 @@ def create_flashcards_pdf(data, output_filename):
     doc.topMargin = 0
     doc.bottomMargin = 0
 
-    # 使用基础字体设置
-    chinese_font = "Helvetica"  # ReportLab内置字体，支持基础中文显示
-
-    # 默认使用ReportLab的边距设置
+    # 使用注册的中文字体
+    chinese_font = "STHeitiLight"
 
     # 页面宽度和高度
     page_width, page_height = A4
@@ -66,38 +63,41 @@ def create_flashcards_pdf(data, output_filename):
     # 基础样式字体设置
     styles["Normal"].fontName = chinese_font
 
-    # 直接内联定义样式（移除冗余变量）
+    # 定义标题样式
     title_style = ParagraphStyle(
         "Title",
         parent=styles["Normal"],
-        fontName=chinese_font,
+        fontName=chinese_font,  # 确保使用中文字体
         fontSize=14,
         alignment=TA_CENTER,
         spaceAfter=6,
     )
 
+    # 定义中文释义样式
     chinese_style = ParagraphStyle(
         "Chinese",
         parent=styles["Normal"],
-        fontName=chinese_font,
+        fontName=chinese_font,  # 确保使用中文字体
         fontSize=12,
         alignment=TA_CENTER,
         spaceAfter=6,
     )
 
+    # 定义词性样式
     pos_style = ParagraphStyle(
         "PartOfSpeech",
         parent=styles["Normal"],
-        fontName=chinese_font,
+        fontName=chinese_font,  # 确保使用中文字体
         fontSize=10,
         alignment=TA_CENTER,
         spaceAfter=4,
     )
 
+    # 定义例句样式
     example_style = ParagraphStyle(
         "Example",
         parent=styles["Normal"],
-        fontName=chinese_font,
+        fontName=chinese_font,  # 确保使用中文字体
         fontSize=9,
         alignment=TA_CENTER,
         leading=10,
