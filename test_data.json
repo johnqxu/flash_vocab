@@ -1,14 +1,89 @@
 [
     {
-        "english": "Hello",
-        "chinese": "你好",
-        "part_of_speech": "interjection",
-        "example_sentence": "Hello! How are you?"
+        "chinese": "交换",
+        "english": "exchange",
+        "part_of_speech": "noun"
     },
     {
-        "english": "Apple",
-        "chinese": "苹果",
+        "chinese": "兴奋的",
+        "english": "excited",
+        "part_of_speech": "adjective"
+    },
+    {
+        "chinese": "令人兴奋的",
+        "english": "exciting",
+        "part_of_speech": "adjective",
+        "example_sentence": "How exciting is the world?"
+    },
+    {
+        "chinese": "宽恕",
+        "english": "excuse",
         "part_of_speech": "noun",
-        "example_sentence": "An apple a day keeps the doctor away."
+        "example_sentence": "Excuse me, what time is it now?"
+    },
+    {
+        "chinese": "借口；辩解",
+        "english": "excuse",
+        "part_of_speech": "noun",
+        "example_sentence": "There's no excuse for behavior like that."
+    },
+    {
+        "chinese": "锻炼；做操；练习；习题",
+        "english": "exercise",
+        "part_of_speech": "noun",
+        "example_sentence": "To keep fit, we should get rid of unhealthy habits and do more exercise."
+    },
+    {
+        "chinese": "锻炼；运用",
+        "english": "exercise",
+        "part_of_speech": "verb",
+        "example_sentence": "To keep fit, we should get rid of unhealthy habits and do more exercise."
+    },
+    {
+        "chinese": "存在",
+        "english": "exist",
+        "part_of_speech": "verb",
+        "example_sentence": "Does life exist on Mars?"
+    },
+    {
+        "chinese": "出口，通道",
+        "english": "exit",
+        "part_of_speech": "noun",
+        "example_sentence": "The customer starts walking to the exit nearest where he parked."
+    },
+    {
+        "chinese": "离别；退出",
+        "english": "exit",
+        "part_of_speech": "verb",
+        "example_sentence": "At the end of the third scene the actress exits."
+    },
+    {
+        "chinese": "预料；期待；认为",
+        "english": "expect",
+        "part_of_speech": "verb",
+        "example_sentence": "Ben and Lily have one child and they are expecting the second one in July."
+    },
+    {
+        "chinese": "昂贵的",
+        "english": "expensive",
+        "part_of_speech": "adjective",
+        "example_sentence": "This beautiful skirt is as expensive as that red scarf."
+    },
+    {
+        "chinese": "经验；经历",
+        "english": "experience",
+        "part_of_speech": "noun"
+    },
+    {
+        "chinese": "实验",
+        "english": "experiment",
+        "part_of_speech": "noun",
+        "example_sentence": "Now the good method is widely used in the experiments."
+    },
+    {
+        "chinese": "探索；探测",
+        "english": "explore",
+        "part_of_speech": "verb",
+        "example_sentence": "Byrd explored the region around the South Pole."
     }
 ]

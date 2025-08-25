@@ -1,4 +1,3 @@
-import json
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import (
     SimpleDocTemplate,
@@ -12,9 +11,12 @@ from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.units import cm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+import json
+import sys
+import os
 
 # 注册中文字体
-pdfmetrics.registerFont(TTFont('STHeitiLight', 'STHeiti Light.ttc'))
+pdfmetrics.registerFont(TTFont("STHeitiLight", "STHeiti Light.ttc"))
 
 
 def create_flashcards_pdf(data, output_filename):
@@ -179,3 +181,35 @@ def create_flashcards_pdf(data, output_filename):
 
     # 构建PDF
     doc.build(elements)
+
+
+def main():
+    """
+    调试入口函数，方便直接测试create_flashcards_pdf功能
+    """
+    # 默认使用test_data.json作为测试数据
+    test_data_file = "test_data.json"
+
+    if len(sys.argv) > 1:
+        test_data_file = sys.argv[1]
+
+    if not os.path.exists(test_data_file):
+        print(f"错误: 测试数据文件 {test_data_file} 不存在")
+        return
+
+    try:
+        with open(test_data_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        output_filename = (
+            f"flashcards_{os.path.splitext(os.path.basename(test_data_file))[0]}.pdf"
+        )
+        create_flashcards_pdf(data, output_filename)
+        print(f"PDF文件已生成: {output_filename}")
+
+    except Exception as e:
+        print(f"生成PDF时出错: {e}")
+
+
+if __name__ == "__main__":
+    main()
