@@ -5,7 +5,7 @@ from reportlab.platypus import (
     TableStyle,
     KeepInFrame,
     Paragraph,
-    Spacer
+    Spacer,
 )
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER
@@ -69,9 +69,9 @@ def create_flashcards_pdf(data, output_filename):
         fontName=chinese_font,
         fontSize=8,
         alignment=TA_CENTER,
-        textColor='gray',
+        textColor="gray",
     )
-    
+
     title_style = ParagraphStyle(
         "Title",
         parent=styles["Normal"],
@@ -100,7 +100,7 @@ def create_flashcards_pdf(data, output_filename):
         alignment=TA_CENTER,
         spaceAfter=4,
         leading=12,
-        textColor='purple',
+        textColor="purple",
     )
 
     example_style = ParagraphStyle(
@@ -110,7 +110,7 @@ def create_flashcards_pdf(data, output_filename):
         fontSize=9,
         alignment=TA_CENTER,
         leading=10,
-        textColor='green',
+        textColor="green",
     )
 
     # 准备数据
@@ -124,71 +124,75 @@ def create_flashcards_pdf(data, output_filename):
 
         # 为每个卡片创建一个包含4个等高部分的列表
         card_parts = []
-        
+
         # 计算每个部分的高度（卡片高度的1/4）
         quarter_height = card_height / 4
-        
+
         # 1. 英文单词部分 (第一个1/4)
         english_content = []
-        english_content.append(Paragraph("English", label_style))
+        # english_content.append(Paragraph("English", label_style))
+        english_content.append(Spacer(1, 18))
         if english:
             english_content.append(Paragraph(english, title_style))
         else:
-            english_content.append(Spacer(1, 10))  # 添加一些空间保持布局
-        
+            english_content.append(Spacer(1, 18))  # 添加一些空间保持布局
+
         english_frame = KeepInFrame(
-            int(card_width - 0.5 * cm), 
-            int(quarter_height - 0.1 * cm), 
+            int(card_width - 0.5 * cm),
+            int(quarter_height - 0.1 * cm),
             english_content,
-            mode="shrink"
+            mode="shrink",
         )
         card_parts.append(english_frame)
-        
+
         # 2. 词性部分 (第二个1/4)
         pos_content = []
-        pos_content.append(Paragraph("Part of Speech", label_style))
+        # pos_content.append(Paragraph("Part of Speech", label_style))
+        pos_content.append(Spacer(1, 18))
         if part_of_speech:
             pos_content.append(Paragraph(part_of_speech, pos_style))
         else:
-            pos_content.append(Spacer(1, 10))  # 添加一些空间保持布局
-        
+            pos_content.append(Spacer(1, 18))  # 添加一些空间保持布局
+
         pos_frame = KeepInFrame(
-            int(card_width - 0.5 * cm), 
-            int(quarter_height - 0.1 * cm), 
+            int(card_width - 0.5 * cm),
+            int(quarter_height - 0.1 * cm),
             pos_content,
-            mode="shrink"
+            mode="shrink",
         )
         card_parts.append(pos_frame)
-        
+
         # 3. 中文释义部分 (第三个1/4)
         chinese_content = []
-        chinese_content.append(Paragraph("Chinese", label_style))
+        # chinese_content.append(Paragraph("Chinese", label_style))
+        chinese_content.append(Spacer(1, 18))
         if chinese:
             chinese_content.append(Paragraph(chinese, chinese_style))
         else:
-            chinese_content.append(Spacer(1, 10))  # 添加一些空间保持布局
-        
+            chinese_content.append(Spacer(1, 18))  # 添加一些空间保持布局
+
         chinese_frame = KeepInFrame(
-            int(card_width - 0.5 * cm), 
-            int(quarter_height - 0.1 * cm), 
+            int(card_width - 0.5 * cm),
+            int(quarter_height - 0.1 * cm),
             chinese_content,
-            mode="shrink"
+            mode="shrink",
         )
         card_parts.append(chinese_frame)
-        
+
         # 4. 例句部分 (第四个1/4)
         example_content = []
-        example_content.append(Paragraph("Example", label_style))
+        # example_content.append(Paragraph("Example", label_style))
+        example_content.append(Spacer(1, 18))
         if example_sentence:
             example_content.append(Paragraph(example_sentence, example_style))
         else:
-            example_content.append(Spacer(1, 10))  # 添加一些空间保持布局
-        
+            example_content.append(Spacer(1, 18))  # 添加一些空间保持布局
+
         example_frame = KeepInFrame(
-            int(card_width - 0.5 * cm), 
-            int(quarter_height - 0.1 * cm), 
+            int(card_width - 0.5 * cm),
+            int(quarter_height - 0.1 * cm),
             example_content,
-            mode="shrink"
+            mode="shrink",
         )
         card_parts.append(example_frame)
 
@@ -199,20 +203,24 @@ def create_flashcards_pdf(data, output_filename):
         # 添加空卡片，每个空卡片也包含4个等高的部分
         empty_card_parts = []
         quarter_height = card_height / 4
-        
+
         for i in range(4):
             # 为每个空卡片部分添加标签
-            empty_content = [Paragraph(["English", "Part of Speech", "Chinese", "Example"][i], label_style)]
-            empty_content.append(Spacer(1, 10))  # 添加一些空间保持布局
-            
+            empty_content = [
+                Paragraph(
+                    ["English", "Part of Speech", "Chinese", "Example"][i], label_style
+                )
+            ]
+            empty_content.append(Spacer(1, 18))  # 添加一些空间保持布局
+
             empty_frame = KeepInFrame(
-                int(card_width - 0.5 * cm), 
-                int(quarter_height - 0.1 * cm), 
+                int(card_width - 0.5 * cm),
+                int(quarter_height - 0.1 * cm),
                 empty_content,
-                mode="shrink"
+                mode="shrink",
             )
             empty_card_parts.append(empty_frame)
-            
+
         cards_data.append(empty_card_parts)
 
     # 构建PDF表格
@@ -232,9 +240,9 @@ def create_flashcards_pdf(data, output_filename):
                     # 将卡片的4个部分垂直组合
                     card_content = page_cards[card_index]
                     card_frame = KeepInFrame(
-                        int(card_width - 0.3 * cm), 
-                        int(card_height - 0.3 * cm), 
-                        card_content
+                        int(card_width - 0.3 * cm),
+                        int(card_height - 0.3 * cm),
+                        card_content,
                     )
                     table_row.append(card_frame)
                 else:
@@ -271,22 +279,24 @@ def main():
     """
     # 默认使用test_data.json作为测试数据
     test_data_file = "test_data.json"
-    
+
     if len(sys.argv) > 1:
         test_data_file = sys.argv[1]
-    
+
     if not os.path.exists(test_data_file):
         print(f"错误: 测试数据文件 {test_data_file} 不存在")
         return
-    
+
     try:
-        with open(test_data_file, 'r', encoding='utf-8') as f:
+        with open(test_data_file, "r", encoding="utf-8") as f:
             data = json.load(f)
-        
-        output_filename = f"flashcards_{os.path.splitext(os.path.basename(test_data_file))[0]}.pdf"
+
+        output_filename = (
+            f"flashcards_{os.path.splitext(os.path.basename(test_data_file))[0]}.pdf"
+        )
         create_flashcards_pdf(data, output_filename)
         print(f"PDF文件已生成: {output_filename}")
-        
+
     except Exception as e:
         print(f"生成PDF时出错: {e}")
 

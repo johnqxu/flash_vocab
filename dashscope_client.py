@@ -1,4 +1,5 @@
 import hashlib
+import json
 import os
 from time import sleep
 from typing import List, Dict, Any
@@ -36,7 +37,8 @@ def analyze_file_with_dashscope(file_path: str) -> List[Dict[str, Any]]:
     file_resp: AddFileResponse = add_files_to_dashscope(
         client, lease.body.data.file_upload_lease_id
     )
-    call_dashscope_api(client, file_resp.body.data.file_id)
+    result = call_dashscope_api(client, file_resp.body.data.file_id)
+    return json.loads(result)
 
 
 def get_file_status(client, file_id):
@@ -94,6 +96,7 @@ def call_dashscope_api(client, file_id):
         print(f"message={response.message}")
     else:
         print("%s\n" % (response.output.text))
+    return response.output.text
 
 
 def create_client() -> bailian20231229Client:
