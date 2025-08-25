@@ -11,6 +11,7 @@ from alibabacloud_tea_util.client import Client as UtilClient
 from alibabacloud_bailian20231229.models import (
     ApplyFileUploadLeaseResponse,
     AddFileResponse,
+    DescribeFileResponse,
 )
 import requests
 from urllib.parse import urlparse
@@ -35,10 +36,50 @@ def analyze_file_with_dashscope(file_path: str) -> List[Dict[str, Any]]:
     file_resp: AddFileResponse = add_files_to_dashscope(
         client, lease.body.data.file_upload_lease_id
     )
-    call_dashscope_api(file_resp.body.data.file_id)
+    call_dashscope_api(client, file_resp.body.data.file_id)
 
 
-def call_dashscope_api(file_id):
+def get_file_status(client, file_id):
+    runtime = util_models.RuntimeOptions()
+    headers = {}
+    try:
+        status: DescribeFileResponse = client.describe_file_with_options(
+            "llm-ks2o91he406b87js",
+            file_id,
+            headers,
+            runtime,
+        )
+        return status.body.data.status
+    except Exception as error:
+        print(error.message)
+        print(error.data.get("Recommend"))
+        UtilClient.assert_as_string(error.message)
+
+
+def call_dashscope_api(client, file_id):
+    # 循环等待文件解析完成
+    i = 0
+    while True:
+        if i < 99:
+            status = get_file_status(client, file_id)
+            if status == "FILE_IS_READY":
+                print("文件解析完成")
+                break
+            elif status in [
+                "PARSE_FAILED",
+                "SAFE_CHECK_FAILED",
+                "INDEX_BUILDING_FAILED",
+            ]:
+                print("文件解析失败")
+                return
+            else:
+                print(f"文件正在解析中...{status}")
+            i = i + 1
+            sleep(5)
+        else:
+            print("文件解析超时")
+            return
+    # sleep(30)
     response = Application.call(
         api_key=os.getenv("DASHSCOPE_API_KEY"),
         app_id=os.getenv("DASHSCOPE_APP_ID"),
@@ -90,6 +131,7 @@ def create_upload_lease(client, file_path: str) -> Dict[str, Any]:
             md_5=calculate_md5(file_path),
             file_name=file_name,
             size_in_bytes=os.path.getsize(file_path),
+            category_type="SESSION_FILE",
         )
     )
     runtime = util_models.RuntimeOptions(read_timeout=6000, connect_timeout=6000)
@@ -134,7 +176,10 @@ def upload_file(pre_signed_url, x_bailian_extra, content_type, file_path):
 
 def add_files_to_dashscope(client, lease_id):
     add_file_request = bailian_20231229_models.AddFileRequest(
-        lease_id=lease_id, parser="DASHSCOPE_DOCMIND", category_id="default"
+        lease_id=lease_id,
+        parser="DASHSCOPE_DOCMIND",
+        category_id="default",
+        category_type="SESSION_FILE",
     )
     runtime = util_models.RuntimeOptions()
     headers = {}

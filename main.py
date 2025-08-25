@@ -12,7 +12,6 @@ try:
     load_dotenv()
 except ImportError:
     print("警告: 未安装 python-dotenv，无法自动加载 .env 文件")
-    print("请手动设置环境变量，或运行: pip install python-dotenv")
 
 
 def main():
